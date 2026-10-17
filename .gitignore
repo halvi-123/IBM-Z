@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Django local files
+media/
+
+# Local environment variables
+.env.*
+!.env.example
