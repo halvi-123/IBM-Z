@@ -90,7 +90,8 @@ EA Hydrology API -> hourly level + rain -> features (last 10 days) -> gradient b
 5. **Status**: ABOVE THRESHOLD > DATA STALE > ALERT > DATA ISSUE > WATCH > LOW. Bad data never yields a confident LOW.
 
 One scoring function (`service.score_frame`) serves live prediction, replay and the benchmark, so what we measure is
-exactly what we serve. A full explanation is in [docs/how-it-works.md](docs/how-it-works.md).
+exactly what we serve. Diagrams of every part are in [docs/architecture.md](docs/architecture.md), and a plain-language
+explanation is in [docs/how-it-works.md](docs/how-it-works.md).
 
 ## Why IBM LinuxONE
 
@@ -255,6 +256,7 @@ Team Qubit:
 
 ## Docs
 
+- [docs/architecture.md](docs/architecture.md): architecture and solution flowcharts (16 diagrams)
 - [docs/README.md](docs/README.md): overview and ground rules
 - [docs/progress.md](docs/progress.md): what we did, step by step, with all results
 - [docs/how-it-works.md](docs/how-it-works.md): the system explained from scratch

@@ -18,6 +18,7 @@ measures how fast it runs there and how accurate it really is, compared with a s
 | Doc | What it covers | Read it if you want to... |
 |---|---|---|
 | [progress.md](progress.md) | What we have done so far, real results, decisions made, what is still open | know where the project stands today |
+| [architecture.md](architecture.md) | Full architecture: 16 diagrams covering system, deployment, data pipeline, training and evaluation, serving, status logic, API, replay, stress tests, benchmark, backend data model, frontend, plus design decisions | see exactly how every part fits together |
 | [how-it-works.md](how-it-works.md) | Data, features, model, evaluation, statuses, data-quality flags and stress tests, explained from scratch | understand or explain the system (for example in the video) |
 | [repository.md](repository.md) | Every folder and file, how the parts talk to each other, how to run them | find your way around the code |
 | [glossary.md](glossary.md) | Short definitions of every term we use | look up a word quickly |
