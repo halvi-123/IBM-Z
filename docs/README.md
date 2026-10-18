@@ -1,6 +1,6 @@
 # Project docs
 
-River-level alert system for the IBM Z Datathon 2026 (theme: "Real-time AI for critical decisions").
+Qubit: River Level Alert, team Qubit's entry for the IBM Z Datathon 2026 (theme: "Real-time AI for critical decisions").
 
 > Decision support, not an official warning. Always check Environment Agency flood warnings.
 
@@ -21,7 +21,7 @@ measures how fast it runs there and how accurate it really is, compared with a s
 | [how-it-works.md](how-it-works.md) | Data, features, model, evaluation, statuses, data-quality flags and stress tests, explained from scratch | understand or explain the system (for example in the video) |
 | [repository.md](repository.md) | Every folder and file, how the parts talk to each other, how to run them | find your way around the code |
 | [glossary.md](glossary.md) | Short definitions of every term we use | look up a word quickly |
-| `screenshots/` | Platform evidence for the submission | prove it ran on LinuxONE |
+| `screenshots/` | 5 screenshots from the LinuxONE VM: `uname -m`, benchmark, running API, API docs replay, stress tests | prove it ran on LinuxONE |
 
 ## Ground rules we keep everywhere
 

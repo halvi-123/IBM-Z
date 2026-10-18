@@ -127,15 +127,26 @@ Django 6.1 project `config` with one app, `alerts`. Plain Django views, no Djang
 
 ## Frontend/
 
-Only `README.md` so far. It describes the two planned views and the API contract:
+Plain HTML and JavaScript, Chart.js from a CDN, no build step. Serve with `python -m http.server 5173` inside
+`Frontend/`, with the tunnel to the model API on port 8000 open. Both pages call the model API directly.
 
-- **Responder view**: current status, probability, reasons, flags, alert feed, live or replay with speed control.
-- **Judge view**: model against our rule, events caught, false alerts per month, lead time, reliability curve,
-  stress tests labelled SYNTHETIC, latency on s390x.
+| File | What it does |
+|---|---|
+| `index.html` | Product page: what it is, the problem, how it works, live evidence figures from `/metrics`, strengths and known limits. "Run the Dec 2024 simulation" opens the console. |
+| `console.html` | Responder console. Status banner with a plain-language line, chance of crossing, level against the high level, alert lead time, data age and data checks. Live chart, reasons, per-step latency. Buttons for the Dec 2024 replay (speed 1, 4 or 20), Live now, Break the sensor (SYNTHETIC) and balanced or sensitive mode. Below that, the judge evidence: stat tiles, model vs rule table, reliability curve, SYNTHETIC stress table. `console.html#replay` starts the replay on load. |
+| `README.md` | How to serve the pages and the backend API contract. |
 
 ## docs/
 
-These pages and `screenshots/` (platform evidence for the submission).
+These pages and `screenshots/`, the platform evidence for the submission:
+
+| File | Shows |
+|---|---|
+| `01-linuxone-s390x.png` | `uname -m` = `s390x` on the VM |
+| `02-benchmark.png` | Benchmark results measured on the VM |
+| `03-service-running.png` | Model API running on the VM, `/health` output |
+| `04-api-docs.png` | FastAPI docs running a December 2024 replay |
+| `05-stress-tests.png` | `stress.json` on the VM, labelled SYNTHETIC |
 
 ## How to run
 

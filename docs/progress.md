@@ -15,8 +15,9 @@ Status as of Sunday 18 October 2026 (submission deadline 17:30 UK the same day).
 | Alert threshold review | Closed: balanced mode gives 2.25 false alerts / month on the holdout, under the 3 / month bar |
 | Stress tests (`Model/stress.py`) | Done, run on the VM on the 9 holdout events, results in `Model/stress.json` |
 | Django backend (`Backend/`) | Done: models, admin, JSON API, model-service client |
-| Frontend (`Frontend/`) | Not built yet, API contract written in `Frontend/README.md` |
-| README, flowchart, screenshots | README drafted, flowchart in [how-it-works.md](how-it-works.md), screenshots still to take |
+| Frontend (`Frontend/`) | Done: product page (`index.html`) and responder console with judge evidence (`console.html`) |
+| Platform screenshots | Done, 5 in `docs/screenshots/` (see "Platform evidence" below) |
+| README, flowchart | README drafted, flowchart in [how-it-works.md](how-it-works.md) |
 
 ## What we did, step by step
 
@@ -260,11 +261,22 @@ retrain with a new cut-off rule chosen only from WY2023 and WY2024.
 Result: 2.25 false alerts per month, 9/9 events caught (table in step 10). The cut-off stays as trained, nothing
 was tuned on WY2025, and the holdout result is reported once.
 
+## Platform evidence
+
+Screenshots taken on the LinuxONE VM (host `surrey`), in `docs/screenshots/`:
+
+| File | Shows |
+|---|---|
+| `01-linuxone-s390x.png` | `uname -m` returns `s390x`, host `surrey`, Ubuntu 24.04.5 LTS |
+| `02-benchmark.png` | `benchmark.json` on the VM: environment (s390x, Python 3.12.3, scikit-learn 1.4.1.post1, 3 CPUs) and latency (total p50 7.921 ms, p95 8.4 ms, n = 200) |
+| `03-service-running.png` | uvicorn running the model API on the VM, and `/health`: HistGradientBoostingClassifier, threshold 1.375 m, operating points, trained until 2024-09-30, holdout from 2024-10-01 |
+| `04-api-docs.png` | The FastAPI docs page running `/replay` for 1 to 7 December 2024 and returning hourly rows with probability, flags and status |
+| `05-stress-tests.png` | `stress.json` on the VM: labelled SYNTHETIC, the 7 scenarios, and the balanced baseline (9/9 caught, 11 h median lead) |
+
 ## Still to do (priority order)
 
-1. Restart the API on the VM so `/metrics` serves `stress.json`, and copy `stress.json` back to the repo.
-2. Screenshots in `docs/screenshots/`: `uname -m`, benchmark output, the running API, stress test output.
-3. Frontend: responder view and judge view.
-4. Fill the results section of the root README from `metrics.json`, `benchmark.json` and `stress.json`.
-5. Record the video (3 minutes max).
-6. If time: a second gauge on a faster-responding river.
+1. Copy `stress.json` back from the VM into `Model/` so it is in the repo.
+2. Optional screenshot: the holdout false-alerts-per-month check output (closes the threshold decision with evidence).
+3. Fill the results section of the root README from `metrics.json`, `benchmark.json` and `stress.json`.
+4. Record the video (3 minutes max).
+5. If time: a second gauge on a faster-responding river.
