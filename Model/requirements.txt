@@ -1,0 +1,9 @@
+# Model service (LinuxONE VM). After installing, pin exact versions with: pip freeze > requirements.lock
+numpy
+pandas
+scikit-learn
+joblib
+requests
+matplotlib
+fastapi
+uvicorn
