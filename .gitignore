@@ -226,3 +226,27 @@ media/
 # Local environment variables
 .env.*
 !.env.example
+# ---- project-specific ----
+# frontend frameworks use src/lib; the Python template above ignores lib/
+!Frontend/**/lib/
+node_modules/
+Frontend/dist/
+Frontend/.next/
+
+# model data and generated files (regenerate on the VM)
+hydro_cache/
+**/hydro_cache/
+jupyter-env/
+Model/hourly.csv
+Model/flood_rf.joblib
+Model/requirements.lock
+
+# secrets: never commit
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+*token*.txt
+
+# Claude Code project context (local only)
+CLAUDE.md
