@@ -13,7 +13,7 @@ Endpoints
   POST /predict                         {"readings":[{"time","level","rain"}], "mode", "now"} -> status
   GET  /replay?start&end&mode           hour-by-hour scores for a past period + true outcome
   GET  /replay/stream?start&end&speed   Server-Sent Events, one realistic prediction per hour
-  GET  /metrics                         cross-validation table + reliability curves
+  GET  /metrics                         cross-validation table + reliability curves (+ SYNTHETIC stress tests)
   GET  /benchmark?n=200                 latency + throughput on this machine (also saved to benchmark.json)
 """
 import json
@@ -34,6 +34,7 @@ MODEL_PATH = os.environ.get("MODEL_PATH", "river_model.joblib")
 HOURLY_CSV = os.environ.get("HOURLY_CSV", "hourly.csv")
 METRICS_JSON = os.environ.get("METRICS_JSON", "metrics.json")
 BENCH_JSON = os.environ.get("BENCH_JSON", "benchmark.json")
+STRESS_JSON = os.environ.get("STRESS_JSON", "stress.json")
 STATE = {}
 
 
@@ -149,6 +150,9 @@ def metrics():
     if os.path.exists(BENCH_JSON):
         with open(BENCH_JSON) as f:
             out["last_benchmark"] = json.load(f)
+    if os.path.exists(STRESS_JSON):
+        with open(STRESS_JSON) as f:
+            out["stress_tests"] = json.load(f)        # labelled SYNTHETIC, keep separate from real metrics
     return out
 
 
