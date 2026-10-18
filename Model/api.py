@@ -13,6 +13,7 @@ Endpoints
   POST /predict                         {"readings":[{"time","level","rain"}], "mode", "now"} -> status
   GET  /replay?start&end&mode           hour-by-hour scores for a past period + true outcome
   GET  /replay/stream?start&end&speed   Server-Sent Events, one realistic prediction per hour
+                      &scenario=...     SYNTHETIC wildcard: same replay with a stress.py fault applied
   GET  /metrics                         cross-validation table + reliability curves (+ SYNTHETIC stress tests)
   GET  /benchmark?n=200                 latency + throughput on this machine (also saved to benchmark.json)
 """
@@ -22,6 +23,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,6 +31,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import service as svc
+import stress
+from bench import find_events, future_max
 
 MODEL_PATH = os.environ.get("MODEL_PATH", "river_model.joblib")
 HOURLY_CSV = os.environ.get("HOURLY_CSV", "hourly.csv")
@@ -36,6 +40,7 @@ METRICS_JSON = os.environ.get("METRICS_JSON", "metrics.json")
 BENCH_JSON = os.environ.get("BENCH_JSON", "benchmark.json")
 STRESS_JSON = os.environ.get("STRESS_JSON", "stress.json")
 STATE = {}
+WILDCARDS = {n: (d, fn, delay) for n, d, fn, delay in stress.SCENARIOS if n != "baseline"}   # SYNTHETIC only
 
 
 @asynccontextmanager
@@ -72,6 +77,7 @@ def health():
         "holdout_start": b["holdout_start"],
         "replay_range": None if h is None else [str(h.index[0]), str(h.index[-1])],
         "suggested_replay_range": None if h is None else list(svc.holdout_range(b, h)),
+        "wildcards": [{"name": n, "description": d} for n, (d, _, _) in WILDCARDS.items()],
         "environment": svc.environment(), "disclaimer": svc.DISCLAIMER,
     })
 
@@ -127,13 +133,38 @@ def replay(start: str, end: str, mode: str = "balanced"):
             "level_threshold_m": STATE["bundle"]["level_threshold"], "disclaimer": svc.DISCLAIMER}
 
 
+def wildcard_steps(b, hourly, start, end, mode, name):
+    """SYNTHETIC: replay with one stress.py scenario applied around the first event in the period.
+    The model sees the damaged data; truth and true_level_m come from the undamaged data."""
+    desc, fn, delay = WILDCARDS[name]
+    hourly = svc.finish(hourly)
+    s, e, hz = svc._ts(start), svc._ts(end), b["horizon_h"]
+    ev = [t for t in find_events(hourly.level.loc[s:e + hz * svc.H], b["level_threshold"]) if t >= s]
+    at = ev[0] if ev else e + svc.H
+    src = hourly.loc[s - (stress.PRE_H + svc.WINDOW_H) * svc.H: e].copy()
+    seg, _ = fn(src, at, np.random.default_rng(0))
+    fut = future_max(hourly.level, hz)
+    for t in hourly.loc[s:e].index:
+        win = seg.loc[t - (svc.WINDOW_H - 1) * svc.H: t - delay * svc.H]
+        r = svc.predict_window(b, win, mode, now=t)
+        f = fut.get(t)
+        r["truth_crosses_within_h"] = None if pd.isna(f) else bool(f >= b["level_threshold"])
+        r["true_level_m"] = round(float(hourly.level.get(t)), 3)
+        r.update(synthetic=True, scenario=name, scenario_description=desc)
+        yield r
+
+
 @app.get("/replay/stream")
 def replay_stream(start: str, end: str, mode: str = "balanced",
-                  speed: float = Query(4.0, gt=0, le=1000, description="simulated hours per second")):
+                  speed: float = Query(4.0, gt=0, le=1000, description="simulated hours per second"),
+                  scenario: Optional[str] = Query(None, description="SYNTHETIC wildcard from stress.py, e.g. gauge_offline")):
     b, h, m = STATE["bundle"], _hourly(), _mode(mode)
+    if scenario is not None and scenario not in WILDCARDS:
+        raise HTTPException(400, f"scenario must be one of {sorted(WILDCARDS)}")
+    steps = wildcard_steps(b, h, start, end, m, scenario) if scenario else svc.replay_steps(b, h, start, end, m)
 
     def gen():
-        for r in svc.replay_steps(b, h, start, end, m):
+        for r in steps:
             yield f"data: {json.dumps(svc._clean(r))}\n\n"
             time.sleep(1.0 / speed)
         yield "event: done\ndata: {}\n\n"
