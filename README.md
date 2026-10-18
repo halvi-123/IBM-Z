@@ -1,4 +1,4 @@
-# River-level alert system – IBM Z Datathon 2026
+# Qubit: River Level Alert – IBM Z Datathon 2026
 
 > Decision support for first responders, not an official warning. Always check Environment Agency flood warnings.
 
@@ -64,3 +64,4 @@ See `Frontend/README.md` for the API contract.
 - Uvicorn – https://www.uvicorn.org
 - Django – https://www.djangoproject.com
 - django-cors-headers – https://github.com/adamchainz/django-cors-headers
+- Chart.js – https://www.chartjs.org

@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qubit River Level Alert</title>
+<style>
+:root{
+  --bg:#ffffff; --soft:#f4f6f8; --line:#e3e7ec; --line2:#d0d6de; --text:#0f1720; --muted:#5b6675; --faint:#8a94a3;
+  --blue:#1c64d1; --low:#1a7f37; --watch:#b97800; --alert:#d9480f; --above:#c62828; --stale:#4b5563; --issue:#6d3fd8;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--blue)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+nav{border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-weight:800;font-size:17px;display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none}
+.brand .prod{font-weight:500;color:var(--muted);padding-left:10px;border-left:1px solid var(--line2)}
+.mark{width:26px;height:26px;border-radius:6px;background:var(--blue);display:grid;place-items:center}
+.mark svg{width:16px;height:16px}
+nav .links{display:flex;gap:18px;margin-left:12px}
+nav .links a{color:var(--muted);text-decoration:none;font-size:14px}
+nav .links a:hover{color:var(--text)}
+nav .spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:8px;font:inherit;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;padding:11px 18px;border:1px solid var(--line2);color:var(--text);background:#fff}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:#1752ad;color:#fff}
+.btn.sm{font-size:13.5px;padding:7px 12px}
+.disclaimer{background:#fff8e1;border-bottom:1px solid #f1e2b3;color:#6b5200;font-size:13px;padding:7px 0;font-weight:500}
+
+/* hero */
+.hero{padding:64px 0 48px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:48px;align-items:center}
+.eyebrow{font-size:12.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--blue)}
+h1{font-size:46px;line-height:1.08;margin:12px 0 16px;letter-spacing:-1px}
+.lede{font-size:18.5px;color:var(--muted);margin:0 0 26px;max-width:540px}
+.cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.cta .hint{font-size:13px;color:var(--faint);width:100%;margin-top:4px}
+
+/* status preview */
+.preview{border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 18px 50px rgba(15,23,32,.08)}
+.preview .bar{display:flex;gap:6px;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--soft);font-size:12px;color:var(--muted);align-items:center}
+.preview .bar i{width:9px;height:9px;border-radius:50%;background:#d6dbe1;display:inline-block}
+.pv{display:grid;grid-template-columns:150px 1fr}
+.pv .state{color:#fff;padding:16px;display:flex;flex-direction:column;justify-content:center;gap:4px;transition:background .5s}
+.pv .state .k{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;opacity:.85;font-weight:600}
+.pv .state .w{font-size:21px;font-weight:800;line-height:1.05}
+.pv .info{padding:14px 16px;font-size:14px}
+.pv .info b{display:block;font-size:15px;margin-bottom:8px;line-height:1.3}
+.pv .chips{display:flex;flex-wrap:wrap;gap:5px}
+.pv .chip{font-size:11.5px;padding:2px 7px;border-radius:4px;border:1px solid var(--line);color:var(--muted);background:#fafbfc}
+.pv .chip.bad{border-color:#d9c8fb;background:#f3eeff;color:var(--issue);font-weight:600}
+.legend{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+.legend div{padding:9px 12px;font-size:12.5px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.legend div:nth-child(3n){border-right:0}
+.legend span{width:10px;height:10px;border-radius:2px;flex:none}
+
+section{padding:56px 0;border-top:1px solid var(--line)}
+section.soft{background:var(--soft)}
+h2{font-size:30px;letter-spacing:-.5px;margin:0 0 10px}
+.sub{color:var(--muted);max-width:720px;margin:0 0 30px;font-size:17px}
+
+/* problem */
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.pt{border:1px solid var(--line);border-radius:10px;padding:20px;background:#fff}
+.pt h3{margin:0 0 6px;font-size:17px}
+.pt p{margin:0;color:var(--muted);font-size:15px}
+
+.h3{font-size:19px;margin:0 0 12px}
+ul.ticks.plain li{padding-left:0}
+ul.ticks.plain li::before{content:none}
+
+/* timeline */
+.timeline{display:grid;grid-template-columns:1fr 120px 1fr 1fr;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+.tl-step{padding:18px 18px 16px;border-right:1px solid var(--line);border-top:4px solid var(--alert)}
+.tl-step:last-child{border-right:0}
+.tl-step.hit{border-top-color:var(--above);background:#fdf3f3}
+.tl-k{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.tl-h{font-weight:700;margin:4px 0 6px}
+.tl-step p{margin:0;font-size:14px;color:var(--muted)}
+.tl-window{display:flex;align-items:center;justify-content:center;background:#fff4ec;border-right:1px solid var(--line);border-top:4px solid var(--alert)}
+.tl-window span{font-weight:800;color:var(--alert);font-size:17px;text-align:center}
+
+/* pipeline */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+.step{padding:18px 16px;border-right:1px solid var(--line);position:relative}
+.step:last-child{border-right:0}
+.step .n{font-size:12px;font-weight:700;color:var(--blue);letter-spacing:.8px}
+.step h4{margin:4px 0 6px;font-size:16px}
+.step p{margin:0;font-size:13.5px;color:var(--muted)}
+.step.z{background:#eef4fd}
+
+/* numbers */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.stat{padding:22px 20px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat .v{font-size:34px;font-weight:800;letter-spacing:-.5px}
+.stat .k{font-weight:600;margin-top:2px}
+.stat .s{font-size:13px;color:var(--muted)}
+.fine{font-size:13px;color:var(--muted);margin-top:12px}
+
+/* honesty */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+ul.ticks{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+ul.ticks li{padding-left:26px;position:relative;font-size:15.5px}
+ul.ticks li::before{content:"\2713";position:absolute;left:0;color:var(--low);font-weight:800}
+ul.warn li::before{content:"!";color:var(--alert);left:6px}
+
+.final{text-align:center;padding:64px 0}
+.final h2{font-size:32px}
+.final p{color:var(--muted);margin:0 auto 24px;max-width:620px}
+footer{border-top:1px solid var(--line);padding:18px 0;color:var(--muted);font-size:13px}
+footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media (max-width:900px){.timeline{grid-template-columns:1fr}.tl-step,.tl-window{border-right:0}.tl-window{padding:10px}.hero,.two{grid-template-columns:1fr}.three{grid-template-columns:1fr}.flow,.stats{grid-template-columns:1fr 1fr}h1{font-size:36px}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M2 15c3 0 3-3 6-3s3 3 6 3 3-3 6-3"/><path d="M2 20c3 0 3-3 6-3s3 3 6 3 3-3 6-3" opacity=".6"/><path d="M12 3v6"/></svg></span>Qubit<span class="prod">River Level Alert</span></a>
+    <div class="links"><a href="#problem">Why rivers</a><a href="#how">How it works</a><a href="#evidence">Evidence</a><a href="#honest">Limits</a></div>
+    <div class="spacer"></div>
+    <a class="btn sm" href="console.html">Open console</a>
+  </div>
+</nav>
+<div class="disclaimer"><div class="wrap">Decision support, not an official warning. Always check Environment Agency flood warnings.</div></div>
+
+<div class="wrap hero">
+  <div>
+    <div class="eyebrow">Real-time AI for first responders &middot; IBM LinuxONE</div>
+    <h1>Know up to 24 hours ahead when a river will cross its high level.</h1>
+    <p class="lede">Every hour, the model reads the last 10 days of river level and rainfall and gives the chance of crossing a high river
+      level within 24 hours. It turns that into one clear status. When the sensor data looks broken, it says so instead of reporting
+      a confident "low".</p>
+    <div class="cta">
+      <a class="btn primary" href="console.html#replay">&#9654; Run the Dec 2024 simulation</a>
+      <a class="btn" href="#how">How it works</a>
+      <div class="hint">Replays a real December 2024 event from the holdout year, hour by hour, through the live model on LinuxONE.</div>
+    </div>
+  </div>
+
+  <div class="preview" aria-label="Status preview">
+    <div class="bar"><i></i><i></i><i></i>&nbsp; Responder console &middot; River Exe at Thorverton</div>
+    <div class="pv">
+      <div class="state" id="pvState"><div class="k">Current status</div><div class="w" id="pvWord">LOW</div></div>
+      <div class="info"><b id="pvLine">No crossing expected in the next 24 h.</b>
+        <div class="chips" id="pvChips"></div></div>
+    </div>
+    <div class="legend">
+      <div><span style="background:var(--low)"></span>LOW</div>
+      <div><span style="background:var(--watch)"></span>WATCH</div>
+      <div><span style="background:var(--alert)"></span>ALERT</div>
+      <div><span style="background:var(--above)"></span>ABOVE THRESHOLD</div>
+      <div><span style="background:var(--stale)"></span>DATA STALE</div>
+      <div><span style="background:var(--issue)"></span>DATA ISSUE</div>
+    </div>
+  </div>
+</div>
+
+<section id="problem" class="soft">
+  <div class="wrap">
+    <h2>Why river levels</h2>
+    <p class="sub">A river is one of the few hazards that warns you before it arrives. Rain falls on the hills first and reaches the
+      gauge hours later. That delay is time responders can use, if someone reads the signs early and the readings can be trusted.</p>
+
+    <div class="timeline" aria-label="What happened in December 2024 at Thorverton">
+      <div class="tl-step">
+        <div class="tl-k">4 Dec, 17:00</div>
+        <div class="tl-h">The river looks calm</div>
+        <p>The level sits near 0.80 m, well under the 1.375 m high level. A level alarm sees nothing. Our model raises its first ALERT.
+          By 19:00 the last 6 h of rain is higher than 88% of training hours.</p>
+      </div>
+      <div class="tl-window"><span>27 h to act</span></div>
+      <div class="tl-step">
+        <div class="tl-k">5 Dec, 03:00 to 19:00</div>
+        <div class="tl-h">The river starts to climb</div>
+        <p>The level rises from 0.88 m to 1.29 m over 16 hours, with the ALERT on throughout.</p>
+      </div>
+      <div class="tl-step hit">
+        <div class="tl-k">5 Dec, 20:00</div>
+        <div class="tl-h">Crosses the high level</div>
+        <p>1.42 m and still rising. This is the moment a simple level alarm would first fire.</p>
+      </div>
+    </div>
+    <p class="fine">Real replay of the River Exe at Thorverton from the holdout year, which the model never saw in training. One event:
+      across the 9 events that year the median lead was 11 h.</p>
+
+    <div class="two" style="margin-top:34px">
+      <div>
+        <h3 class="h3">What responders can do with a day's notice</h3>
+        <ul class="ticks">
+          <li>Close fords and low roads before cars get caught, not after.</li>
+          <li>Move vehicles, equipment and livestock out of low-lying ground.</li>
+          <li>Put out temporary barriers and pumps and stand up crews.</li>
+          <li>Check on vulnerable residents while roads are still open.</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="h3">What they have today, and the gap</h3>
+        <ul class="ticks plain">
+          <li><b>Live gauge readings</b> show where the river is now, not where it is heading in the next day.</li>
+          <li><b>Official flood warnings</b> are the authority and stay that way. This is a second pair of eyes on one gauge,
+            with its track record shown next to it.</li>
+          <li><b>We predict a measurable line</b>, the gauge's high level, rather than "flood". Whether water reaches
+            homes depends on local defences, so we only claim what we can check.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="h3" style="margin-top:34px">Three things make this hard</h3>
+    <div class="three">
+      <div class="pt"><h3>Too early or too late</h3><p>A level alarm fires once the river is already high. Alerting on rain alone fires
+        too often: our own 24 h rain rule caught 33 of 45 events at a higher false alert rate than the model.</p></div>
+      <div class="pt"><h3>False alarms wear out trust</h3><p>Every alert costs crews time. Too many and people stop responding, so we count
+        false alerts per month next to every result, not just how many events were caught.</p></div>
+      <div class="pt"><h3>Sensors fail quietly</h3><p>A frozen gauge or a dropped feed looks like calm water. A system that then says
+        "low risk" is worse than no system, so broken data is shown as DATA STALE or DATA ISSUE.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <p class="sub">One scoring path for live data, replay and benchmarks, so what we measure is exactly what we serve.</p>
+    <div class="flow">
+      <div class="step"><div class="n">01</div><h4>Readings</h4><p>River level and rainfall from the Environment Agency Hydrology API, cleaned to an hourly grid.</p></div>
+      <div class="step"><div class="n">02</div><h4>Features</h4><p>Level now, rises over 1 to 24 h, recent peaks, rain over 1 h to 7 days.</p></div>
+      <div class="step z"><div class="n">03</div><h4>Model on LinuxONE</h4><p>HistGradientBoosting gives the chance of crossing in 24 h. Trained and served on <b id="arch">s390x</b>.</p></div>
+      <div class="step"><div class="n">04</div><h4>Data checks</h4><p>Stale feed, missing hours, stuck sensor, sudden spike, rain gauge offline.</p></div>
+      <div class="step"><div class="n">05</div><h4>Status</h4><p>One status with reasons and data warnings. Balanced or sensitive mode.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="evidence" class="soft">
+  <div class="wrap">
+    <h2>Evidence, with the event counts</h2>
+    <p class="sub">Tested leave-one-water-year-out on the River Exe at Thorverton: 3 water years, 45 high-level events, one gauge. Thresholds are chosen inside the training years only.</p>
+    <div class="stats">
+      <div class="stat"><div class="v num" id="sEvents">&ndash;</div><div class="k">events caught</div><div class="s">balanced point, 45 events</div></div>
+      <div class="stat"><div class="v num" id="sFalse">&ndash;</div><div class="k">false alerts per month</div><div class="s">same 45 events</div></div>
+      <div class="stat"><div class="v num" id="sRule">&ndash;</div><div class="k">our 24 h rain rule</div><div class="s">events caught, same test</div></div>
+      <div class="stat"><div class="v num" id="sLat">&ndash;</div><div class="k">data to status, p50</div><div class="s" id="sLatS">measured on LinuxONE</div></div>
+    </div>
+    <p class="fine" id="evNote">Figures load live from the model service. Full tables, calibration and SYNTHETIC stress tests are in the console.</p>
+  </div>
+</section>
+
+<section id="honest">
+  <div class="wrap two">
+    <div>
+      <h2>What it does well</h2>
+      <ul class="ticks">
+        <li>On the Dec 2024 holdout event, the first ALERT came 27 h before the river crossed the high level.</li>
+        <li>Never turns missing or late data into a confident LOW: it shows DATA STALE or DATA ISSUE.</li>
+        <li>In testing, hours given about 30% crossed about 30% of the time.</li>
+        <li>About 8 ms from data to status on LinuxONE, reported as measured.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Known limits</h2>
+      <ul class="ticks warn">
+        <li>One gauge and 45 events: results are noisy and models are within noise of each other.</li>
+        <li>A stuck sensor takes 24 h to detect. It is the one silent miss in our SYNTHETIC stress tests.</li>
+        <li>Reasons describe unusual inputs. They are not an explanation of the model.</li>
+        <li>Decision support only. It does not replace official warnings.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="final soft">
+  <div class="wrap">
+    <h2>See it run on a real event</h2>
+    <p>December 2024, River Exe at Thorverton. The model never saw this year in training. Watch the status change hour by hour.</p>
+    <div class="cta" style="justify-content:center">
+      <a class="btn primary" href="console.html#replay">&#9654; Run the Dec 2024 simulation</a>
+      <a class="btn" href="console.html#wildcard-gauge_offline">&#9888; Wildcard: the gauge goes offline (SYNTHETIC)</a>
+    </div>
+    <p class="fine" style="margin-top:14px">The wildcard replays the same event with the gauge cut off 12 h before the crossing. It is a stress test, never training data.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Decision support, not an official warning. Always check Environment Agency flood warnings.</span>
+    <span>Team Qubit &middot; IBM Z Datathon 2026 &middot; data: Environment Agency Hydrology API (Open Government Licence)</span>
+  </div>
+</footer>
+
+<script>
+const API = "http://localhost:8000";
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// status preview cycles through the states a responder can see
+const STATES = [
+  ["LOW", "--low", "No crossing expected in the next 24 h.", []],
+  ["WATCH", "--watch", "Elevated chance of crossing within 24 h. Keep monitoring.", []],
+  ["ALERT", "--alert", "Crossing the high level is possible within 24 h. Review and prepare.", []],
+  ["ABOVE THRESHOLD", "--above", "River is above the high level now.", []],
+  ["DATA ISSUE", "--issue", "Sensor data unreliable. Do not treat this as low risk.", ["stuck sensor"]],
+  ["DATA STALE", "--stale", "No gauge reading for 5 h. Do not rely on this status.", ["stale data"]],
+];
+// [raised, clear]
+const CHECKS = [["stale data", "data fresh"], ["stuck sensor", "sensor moving"], ["sudden spike", "no spike"], ["rain gauge offline", "rain gauge online"]];
+let i = 0;
+function cycle() {
+  const [w, c, line, bad] = STATES[i++ % STATES.length];
+  $("pvState").style.background = css(c);
+  $("pvWord").textContent = w;
+  $("pvLine").textContent = line;
+  $("pvChips").innerHTML = CHECKS.map(([b, ok]) => bad.includes(b) ? `<span class="chip bad">⚠ ${b}</span>` : `<span class="chip">✓ ${ok}</span>`).join("");
+}
+cycle(); setInterval(cycle, 2200);
+
+// live evidence from the model service
+fetch(`${API}/metrics`).then(r => r.json()).then(m => {
+  const bal = m.summary.filter(r => r.op === "balanced");
+  const hgb = bal.find(r => r.model === "hist_gb"), rule = bal.find(r => r.model === "rule_rain_24h");
+  $("sEvents").textContent = hgb.events_caught;
+  $("sFalse").textContent = hgb.false_alerts_per_month.toFixed(2);
+  if (rule) $("sRule").textContent = rule.events_caught;
+  const b = m.last_benchmark || {}, env = b.environment || m.environment || {};
+  if (b.single_prediction_ms) $("sLat").textContent = b.single_prediction_ms.total.p50.toFixed(1) + " ms";
+  $("sLatS").textContent = `measured on ${env.machine || "the VM"}, ${b.single_prediction_n || "?"} predictions`;
+  $("arch").textContent = env.machine || "s390x";
+}).catch(() => { $("evNote").textContent = "Model service not reachable, so live figures are not shown. Start the SSH tunnel to port 8000."; });
+</script>
+</body>
+</html>

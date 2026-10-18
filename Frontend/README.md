@@ -1,6 +1,13 @@
 # Frontend
 
-Not built yet. Two views:
+Plain HTML + JS, Chart.js from a CDN, no build step. Serve with `python -m http.server 5173` in this folder
+(model API tunnel on :8000 must be open).
+
+- `index.html`: product page (what it is, how it works, live evidence figures). "Run the Dec 2024 simulation" opens the console.
+- `console.html`: responder console plus judge evidence. `console.html#replay` starts the Dec 2024 replay on load,
+  `#replay-20` also sets the speed.
+
+Planned views (both now in `console.html`):
 
 - **Responder view**: current status (LOW / WATCH / ALERT / ABOVE THRESHOLD / DATA STALE / DATA ISSUE),
   probability of crossing within 24 h, reasons, data-quality flags, alert feed, live/replay toggle with speed control.

@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qubit Responder Console</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f4f6f8; --card:#ffffff; --line:#e3e7ec; --line2:#d0d6de; --text:#0f1720; --muted:#5b6675; --faint:#8a94a3;
+  --blue:#1c64d1; --low:#1a7f37; --watch:#b97800; --alert:#d9480f; --above:#c62828; --stale:#4b5563; --issue:#6d3fd8;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:14px;padding:10px 24px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.top .station{font-weight:700;font-size:15px}
+.top .back{color:var(--muted);text-decoration:none;font-size:13px}
+.top .back:hover{color:var(--blue)}
+.top .sep{width:1px;height:18px;background:var(--line2)}
+.top .meta{color:var(--muted);font-size:13px}
+.top .spacer{flex:1}
+.pill{font-size:12px;padding:3px 9px;border-radius:6px;border:1px solid var(--line2);color:var(--muted);white-space:nowrap}
+.pill b{color:var(--text)}
+.pill.ok{border-color:#b7e1c3;color:var(--low)}
+.pill.bad{border-color:#f3c0c0;color:var(--above)}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--faint);margin-right:6px;vertical-align:1px}
+.live-dot.on{background:var(--above);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.disclaimer{background:#fff8e1;border-bottom:1px solid #f1e2b3;color:#6b5200;font-size:12.5px;padding:6px 24px;font-weight:500}
+
+main{max-width:1440px;margin:0 auto;padding:18px 24px 32px;display:grid;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+.card h2{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:8px}
+.card .body{padding:14px 16px}
+
+/* status banner */
+.banner{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#fff;--c:var(--stale)}
+.banner .state{background:var(--c);color:#fff;padding:20px 24px;display:flex;flex-direction:column;justify-content:center;gap:6px;transition:background .4s}
+.banner .state .k{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.85;font-weight:600}
+.banner .state .word{font-size:40px;font-weight:800;line-height:1;letter-spacing:.5px}
+.banner .state .when{font-size:13px;opacity:.9}
+.banner .info{padding:18px 22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.headline{font-size:20px;font-weight:650;line-height:1.3}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:8px}
+.fact{padding:10px 14px;border-right:1px solid var(--line)}
+.fact:last-child{border-right:0}
+.fact .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.fact .v{font-size:24px;font-weight:700;margin-top:2px}
+.fact .s{font-size:12px;color:var(--muted)}
+.gauge{height:6px;background:#eef1f4;border-radius:3px;margin-top:6px;position:relative;overflow:visible}
+.gauge i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--blue);transition:width .4s}
+.gauge u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--above)}
+.checks{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.checks .lab{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-right:4px}
+.chk{font-size:12.5px;padding:3px 9px;border-radius:5px;border:1px solid var(--line);color:var(--muted);background:#fafbfc}
+.chk.bad{border-color:#d9c8fb;background:#f3eeff;color:var(--issue);font-weight:600}
+
+/* toolbar */
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-size:13px;color:var(--text);background:#fff;border:1px solid var(--line2);border-radius:7px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+button.primary:hover{background:#1752ad;color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:7px 10px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line2)}
+.seg button.on{background:#eaf1fc;color:var(--blue);font-weight:600}
+.tlab{font-size:12px;color:var(--muted);margin-left:6px}
+.wild{display:inline-flex;gap:6px;align-items:center;padding:4px 4px 4px 8px;border:1px dashed #f0d78a;border-radius:8px;background:#fffbea}
+select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line2);border-radius:7px;background:#fff;color:var(--text)}
+.msg{font-size:12.5px;color:var(--muted)}
+
+/* layout */
+.row{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px}
+.chartbox{position:relative;height:420px}
+.side{display:flex;flex-direction:column;gap:16px}
+.reasons{display:flex;flex-direction:column;gap:8px;min-height:24px}
+.reason{font-size:13.5px;padding:8px 10px;border-left:3px solid var(--c,var(--blue));background:#f7f9fb;border-radius:0 6px 6px 0}
+.empty{color:var(--faint);font-size:13px}
+.note{font-size:12px;color:var(--muted)}
+.lead .big{font-size:30px;font-weight:800}
+.pipe{display:grid;gap:6px}
+.pstep{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.pstep:last-child{border-bottom:0;font-weight:700}
+.pstep span:first-child{color:var(--muted)}
+.pstep.flash span:last-child{color:var(--blue)}
+
+/* evidence */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.tile{padding:14px 16px;border-right:1px solid var(--line)}
+.tile:last-child{border-right:0}
+.tile .v{font-size:30px;font-weight:800}
+.tile .k{font-size:13px;font-weight:600;margin-top:2px}
+.tile .s{font-size:12px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;background:#fafbfc}
+tr.served td{background:#eef4fd;font-weight:600}
+td.dim{color:var(--faint)}
+.tag{font-size:10.5px;padding:1px 6px;border-radius:4px;border:1px solid var(--line2);color:var(--muted);margin-left:6px;font-weight:500}
+.why{font-size:11.5px;color:var(--alert);white-space:normal;margin-top:2px;font-weight:500}
+.synth{font-size:11px;font-weight:800;letter-spacing:1.2px;color:#7a5600;background:#fff3cd;border:1px solid #f0d78a;border-radius:4px;padding:2px 7px}
+.silent{color:var(--above);font-weight:800}
+.tablewrap{overflow-x:auto}
+footer{text-align:center;color:var(--muted);font-size:12.5px;padding:14px;border-top:1px solid var(--line);background:#fff}
+@media (max-width:1100px){.banner,.row,.grid2{grid-template-columns:1fr}.facts,.tiles{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="top">
+  <a href="index.html" class="back">&larr; <b>Qubit</b> River Level Alert</a>
+  <span class="sep"></span>
+  <span class="station">River Exe &middot; Thorverton</span>
+  <span class="sep"></span>
+  <span class="meta">High level <b class="num" id="thr">1.375</b> m &middot; 24 h horizon</span>
+  <span class="spacer"></span>
+  <span class="pill"><span class="live-dot" id="dot"></span><span id="feed">idle</span></span>
+  <span class="pill">mode <b id="modeLbl">balanced</b></span>
+  <span class="pill">runs on <b id="machine">...</b></span>
+  <span class="pill" id="apiState">model API ...</span>
+</div>
+<div class="disclaimer">Decision support, not an official warning. Always check Environment Agency flood warnings.</div>
+
+<main>
+  <!-- STATUS: the first thing a responder reads -->
+  <section class="banner" id="banner">
+    <div class="state">
+      <div class="k">Current status</div>
+      <div class="word" id="word">NO DATA</div>
+      <div class="when" id="when">Start a replay or fetch live data</div>
+    </div>
+    <div class="info">
+      <div class="headline" id="headline">Waiting for data.</div>
+      <div class="facts">
+        <div class="fact"><div class="k">Chance of crossing in 24 h</div><div class="v num" id="prob">&ndash;</div><div class="s" id="probS">alert at &ndash;</div></div>
+        <div class="fact"><div class="k">River level</div><div class="v num" id="level">&ndash;</div>
+          <div class="gauge"><i id="gaugeFill" style="width:0"></i><u id="gaugeThr" style="left:76%"></u></div></div>
+        <div class="fact"><div class="k">Alert lead time</div><div class="v num" id="leadV">&ndash;</div><div class="s" id="leadS">no alert yet</div></div>
+        <div class="fact"><div class="k">Last reading</div><div class="v num" id="age">&ndash;</div><div class="s">stale after 3 h</div></div>
+      </div>
+      <div class="checks" id="checks"><span class="lab">Data checks</span><span class="empty">&ndash;</span></div>
+    </div>
+  </section>
+
+  <section class="toolbar">
+    <button class="primary" id="btnReplay">&#9654; Replay Dec 2024 event</button>
+    <span class="tlab">speed</span>
+    <div class="seg" id="speedSeg"><button data-v="1">1&times;</button><button data-v="4" class="on">4&times;</button><button data-v="20">20&times;</button></div>
+    <span class="tlab">mode</span>
+    <div class="seg" id="modeSeg"><button data-v="balanced" class="on">Balanced</button><button data-v="sensitive">Sensitive</button></div>
+    <button id="btnLive">Live now</button>
+    <button id="btnBreak">Break the sensor (synthetic)</button>
+    <span class="wild">
+      <span class="synth">SYNTHETIC</span>
+      <select id="wildSel">
+        <option value="gauge_offline">Gauge goes offline</option>
+        <option value="stuck_sensor">Sensor freezes</option>
+        <option value="late_data">Readings arrive late</option>
+        <option value="gaps">Readings go missing</option>
+        <option value="sudden_spike">Sudden spike</option>
+        <option value="doubled_rain">Rain doubled</option>
+      </select>
+      <button id="btnWild">Run wildcard</button>
+    </span>
+    <span class="msg" id="clock"></span>
+  </section>
+
+  <section class="row">
+    <div class="card">
+      <h2>River level and chance of crossing</h2>
+      <div class="body">
+        <div class="chartbox"><canvas id="chart"></canvas></div>
+        <div class="note" id="chartNote">Replays use the holdout year (WY2025), which the model never saw in training.</div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="card">
+        <h2>Why this status</h2>
+        <div class="body">
+          <div class="reasons" id="reasons"><span class="empty">No unusual inputs.</span></div>
+          <div class="note" style="margin-top:10px">Inputs unusually high compared with training hours. Descriptive, not model attributions.</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Pipeline &middot; this prediction</h2>
+        <div class="body pipe" id="pipe">
+          <div class="pstep"><span>EA gauge, data age</span><span class="num" id="lat0">&ndash;</span></div>
+          <div class="pstep"><span>Features (240 h window)</span><span class="num" id="lat1">&ndash;</span></div>
+          <div class="pstep"><span>Model on LinuxONE <b id="arch">s390x</b></span><span class="num" id="lat2">&ndash;</span></div>
+          <div class="pstep"><span>Data checks</span><span class="num" id="lat3">&ndash;</span></div>
+          <div class="pstep"><span>Total to status</span><span class="num" id="lat4">&ndash;</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EVIDENCE -->
+  <section class="card">
+    <h2>Performance evidence</h2>
+    <div class="tiles">
+      <div class="tile"><div class="v num" id="tEvents">&ndash;</div><div class="k">events caught</div><div class="s">balanced point, 45 events, 3 water years</div></div>
+      <div class="tile"><div class="v num" id="tFalse">&ndash;</div><div class="k">false alerts per month</div><div class="s">same 45 events</div></div>
+      <div class="tile"><div class="v num" id="tP50">&ndash;</div><div class="k">p50 latency, data to status</div><div class="s" id="tP50s">measured on the VM</div></div>
+      <div class="tile"><div class="v num" id="tPps">&ndash;</div><div class="k">predictions per second</div><div class="s" id="tPpss">batch, on the VM</div></div>
+    </div>
+    <div class="body note" id="metricsErr" style="display:none"></div>
+  </section>
+
+  <section class="grid2">
+    <div class="card">
+      <h2>Model vs our rule baselines &middot; balanced point</h2>
+      <div class="body">
+        <div class="note" style="margin-bottom:8px">45 events, 3 water years, one gauge. Rules are ones we built. Differences between the models are within noise.</div>
+        <div class="tablewrap"><table id="cvTable"></table></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Reliability &middot; does 30% mean 30%?</h2>
+      <div class="body"><div class="chartbox" style="height:280px"><canvas id="rel"></canvas></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Stress tests <span class="synth">SYNTHETIC</span></h2>
+    <div class="body">
+      <div class="note" id="stressNote" style="margin-bottom:8px"></div>
+      <div class="tablewrap"><table id="stressTable"></table></div>
+    </div>
+  </section>
+</main>
+
+<footer>Decision support, not an official warning. Always check Environment Agency flood warnings. &middot; Team Qubit, IBM Z Datathon 2026</footer>
+
+<script>
+const API = "http://localhost:8000";
+const REPLAY = {start: "2024-12-04T12:00Z", end: "2024-12-05T22:00Z"};
+const COLORS = {LOW: "--low", WATCH: "--watch", ALERT: "--alert", "ABOVE THRESHOLD": "--above", "DATA STALE": "--stale", "DATA ISSUE": "--issue"};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const $ = id => document.getElementById(id);
+let speed = 4, mode = "balanced", es = null, threshold = 1.375, lastAsOf = null, alertAt = null, leadDone = false;
+
+// ---------- small helpers
+function seg(id, cb) {
+  $(id).querySelectorAll("button").forEach(b => b.onclick = () => {
+    $(id).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    cb(b.dataset.v);
+  });
+}
+seg("speedSeg", v => speed = +v);
+seg("modeSeg", v => { mode = v; $("modeLbl").textContent = v; });
+
+function countUp(el, to, {dec = 0, suffix = "", ms = 1200} = {}) {
+  const t0 = performance.now();
+  const step = now => {
+    const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = (to * e).toLocaleString(undefined, {minimumFractionDigits: dec, maximumFractionDigits: dec}) + suffix;
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+const toDate = s => new Date(s.replace(" ", "T"));
+const hourLabel = s => toDate(s).toISOString().slice(5, 13).replace("T", " ") + ":00";
+const ms = v => v == null ? "–" : v.toFixed(1) + " ms";
+
+// ---------- main chart
+const chart = new Chart($("chart"), {
+  data: {labels: [], datasets: [
+    {type: "line", label: "River level (m)", data: [], yAxisID: "y", borderColor: css("--blue"), borderWidth: 2.5, pointRadius: 0, tension: .25},
+    {type: "line", label: "High level", data: [], yAxisID: "y", borderColor: css("--above"), borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0},
+    {type: "line", label: "Chance of crossing in 24 h", data: [], yAxisID: "p", borderColor: "rgba(217,72,15,.85)", borderWidth: 1.25,
+     backgroundColor: "rgba(217,72,15,.12)", fill: "origin", pointRadius: 0, tension: .25},
+    {type: "line", label: "True level (undamaged)", data: [], yAxisID: "y", borderColor: "#9aa3ae", borderDash: [2, 3],
+     borderWidth: 2, pointRadius: 0, tension: .25, hidden: true},
+  ]},
+  options: {
+    responsive: true, maintainAspectRatio: false, animation: {duration: 250},
+    interaction: {mode: "index", intersect: false},
+    plugins: {legend: {position: "top", align: "start", labels: {color: css("--muted"), boxWidth: 12, boxHeight: 2}}},
+    scales: {
+      x: {ticks: {color: css("--faint"), maxRotation: 0, autoSkip: true, maxTicksLimit: 8}, grid: {display: false}},
+      y: {position: "left", suggestedMin: .6, suggestedMax: 1.8, title: {display: true, text: "level (m)", color: css("--muted")},
+          ticks: {color: css("--faint")}, grid: {color: "#eef1f4"}},
+      p: {position: "right", min: 0, max: 1, title: {display: true, text: "chance", color: css("--muted")},
+          ticks: {color: css("--faint"), callback: v => v * 100 + "%"}, grid: {display: false}},
+    },
+  },
+});
+function resetChart() { chart.data.labels = []; chart.data.datasets.forEach(d => d.data = []); chart.update(); }
+function pushPoint(r) {
+  chart.data.labels.push(hourLabel(r.as_of));
+  chart.data.datasets[0].data.push(r.level_m);
+  chart.data.datasets[1].data.push(r.level_threshold_m);
+  chart.data.datasets[2].data.push(r.probability);
+  chart.data.datasets[3].data.push(r.true_level_m ?? null);
+  chart.update();
+}
+
+// ---------- pipeline
+function pulse(r) {
+  const L = r.latency_ms || {};
+  const vals = [L.fetch != null ? `fetch ${ms(L.fetch)}` : (r.data_age_h != null ? `${r.data_age_h} h` : "–"),
+                ms(L.features), ms(L.model), ms(L.flags), ms(L.total)];
+  [...$("pipe").children].forEach((st, i) => {
+    $("lat" + i).textContent = vals[i];
+    st.classList.add("flash"); setTimeout(() => st.classList.remove("flash"), 300);
+  });
+}
+
+// ---------- status
+const FLAG_LABELS = {stale: ["Stale data", "Data fresh"], stuck_sensor: ["Stuck sensor", "Sensor moving"],
+  sudden_spike: ["Sudden spike", "No spike"], rain_offline: ["Rain gauge offline", "Rain gauge online"]};
+function headline(r) {
+  const lvl = r.level_m == null ? "" : r.level_m.toFixed(2) + " m";
+  const f = r.flags || {}, bad = Object.keys(FLAG_LABELS).filter(k => f[k]).map(k => FLAG_LABELS[k][0].toLowerCase());
+  if (f.missing_level_hours_24h > 6) bad.push(`${f.missing_level_hours_24h} missing hours`);
+  return {
+    "ABOVE THRESHOLD": `River is above the high level now (${lvl} vs ${threshold.toFixed(2)} m).`,
+    "DATA STALE": `No gauge reading for ${r.data_age_h ?? "?"} h. Do not rely on this status.`,
+    "ALERT": `Crossing the high level is possible within 24 h. Review and prepare.` + (bad.length ? ` Data warning: ${bad.join(", ")}.` : ""),
+    "DATA ISSUE": `Sensor data unreliable (${bad.join(", ") || "data checks failed"}). Do not treat this as low risk.`,
+    "WATCH": "Elevated chance of crossing the high level within 24 h. Keep monitoring.",
+    "LOW": "No crossing expected in the next 24 h. Data checks passed.",
+  }[r.status] || r.status;
+}
+function render(r, src) {
+  const c = css(COLORS[r.status] || "--stale");
+  const b = $("banner"); b.style.setProperty("--c", c); b.style.borderColor = c;
+  $("word").textContent = r.status;
+  $("when").textContent = `${src} · ${hourLabel(r.as_of)} UTC · ${r.mode}`;
+  $("headline").textContent = headline(r);
+  $("prob").textContent = r.probability == null ? "–" : (r.probability * 100).toFixed(1) + "%";
+  $("probS").textContent = `alert at ${(r.alert_threshold * 100).toFixed(1)}%, watch at ${(r.watch_threshold * 100).toFixed(1)}%`;
+  $("level").textContent = r.level_m == null ? "–" : r.level_m.toFixed(3) + " m";
+  const top = Math.max(threshold * 1.3, r.level_m || 0);
+  $("gaugeFill").style.width = Math.min(100, 100 * (r.level_m || 0) / top) + "%";
+  $("gaugeFill").style.background = (r.level_m || 0) >= threshold ? css("--above") : css("--blue");
+  $("gaugeThr").style.left = (100 * threshold / top) + "%";
+  $("age").textContent = r.data_age_h == null ? "–" : r.data_age_h + " h";
+  const f = r.flags || {}, gap = f.missing_level_hours_24h || 0;
+  $("checks").innerHTML = '<span class="lab">Data checks</span>' +
+    Object.entries(FLAG_LABELS).map(([k, [bad, ok]]) => `<span class="chk ${f[k] ? "bad" : ""}">${f[k] ? "⚠ " + bad : "✓ " + ok}</span>`).join("") +
+    `<span class="chk ${gap > 6 ? "bad" : ""}">${gap > 6 ? "⚠" : "✓"} ${gap} missing h in 24 h</span>`;
+  $("reasons").style.setProperty("--c", c);
+  $("reasons").innerHTML = (r.reasons || []).length
+    ? r.reasons.map(x => `<div class="reason">${x.text}</div>`).join("")
+    : '<span class="empty">No unusual inputs.</span>';
+}
+function leadTrack(r) {
+  const t = toDate(r.as_of);
+  if (leadDone) return;
+  if (r.status === "ALERT" && !alertAt) alertAt = t;
+  if (!alertAt) {
+    if (r.status === "ABOVE THRESHOLD") { leadDone = true; $("leadV").textContent = "none"; $("leadS").textContent = "crossed with no ALERT beforehand"; }
+    return;
+  }
+  const h = Math.round((t - alertAt) / 3.6e6);
+  if (r.status === "ABOVE THRESHOLD") {
+    leadDone = true;
+    $("leadV").textContent = h + " h";
+    $("leadS").textContent = "ALERT raised before crossing";
+  } else {
+    $("leadV").textContent = h + " h";
+    $("leadS").textContent = `ALERT since ${hourLabel(alertAt.toISOString())}, counting`;
+  }
+}
+function resetLead() { alertAt = null; leadDone = false; $("leadV").textContent = "–"; $("leadS").textContent = "no alert yet"; }
+
+// ---------- replay
+function setFeed(on, text) { $("dot").classList.toggle("on", on); $("feed").textContent = text; }
+function startReplay(scenario = null) {
+  if (es) es.close();
+  resetChart(); resetLead(); lastAsOf = null;
+  chart.data.datasets[3].hidden = !scenario;
+  const label = scenario ? $("wildSel").selectedOptions[0].textContent : "";
+  $("chartNote").textContent = scenario
+    ? `SYNTHETIC wildcard: "${label}" applied to the Dec 2024 holdout event. Blue is what the system sees, grey dashed is the true level.`
+    : "Replay of a holdout event (WY2025), which the model never saw in training.";
+  let got = 0;
+  es = new EventSource(`${API}/replay/stream?start=${REPLAY.start}&end=${REPLAY.end}&mode=${mode}&speed=${speed}` +
+                       (scenario ? `&scenario=${scenario}` : ""));
+  setFeed(true, scenario ? "SYNTHETIC wildcard running" : "REPLAY running"); $("clock").textContent = "";
+  es.onmessage = e => {
+    const r = JSON.parse(e.data);
+    if (!r.as_of) return;
+    got++; lastAsOf = r.as_of;
+    pushPoint(r); pulse(r); render(r, r.synthetic ? `SYNTHETIC · ${label}` : "REPLAY"); leadTrack(r);
+  };
+  es.addEventListener("done", () => { es.close(); es = null; setFeed(false, scenario ? "wildcard finished" : "replay finished"); });
+  es.onerror = () => {
+    if (es) { es.close(); es = null; }
+    setFeed(false, "stream closed");
+    if (!got && scenario) $("clock").textContent = "Wildcard stream failed. Is the updated api.py running on the VM?";
+  };
+}
+$("btnReplay").onclick = () => startReplay();
+$("btnWild").onclick = () => startReplay($("wildSel").value);
+
+// ---------- live now
+$("btnLive").onclick = async () => {
+  $("clock").textContent = "Fetching live EA data...";
+  try {
+    const r = await (await fetch(`${API}/predict?mode=${mode}`)).json();
+    if (!r.status) throw new Error(r.detail || "no status");
+    resetLead(); render(r, "LIVE"); pulse(r); setFeed(false, "live snapshot");
+    $("clock").textContent = `Live · EA fetch ${ms(r.latency_ms.fetch)}`;
+  } catch (e) { $("clock").textContent = "Live data unavailable: " + e.message; }
+};
+
+// ---------- break the sensor (SYNTHETIC): last 240 replayed hours, level frozen for the final 30 h
+$("btnBreak").onclick = async () => {
+  const end = lastAsOf ? toDate(lastAsOf) : new Date(REPLAY.end);
+  const start = new Date(end - 239 * 3.6e6);
+  $("clock").textContent = "Building broken input...";
+  try {
+    const rep = await (await fetch(`${API}/replay?start=${start.toISOString()}&end=${end.toISOString()}&mode=${mode}`)).json();
+    const rows = rep.rows.filter(x => x.level != null);
+    const cut = rows.length - 30, frozen = rows[cut - 1].level;
+    const readings = rows.map((x, i) => ({time: x.time, level: i >= cut ? frozen : x.level}));
+    const r = await (await fetch(`${API}/predict`, {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({readings, mode, now: end.toISOString()})})).json();
+    if (!r.status) throw new Error(r.detail || "no status");
+    render(r, "SYNTHETIC · sensor frozen 30 h"); pulse(r); setFeed(false, "synthetic test");
+    $("clock").textContent = "SYNTHETIC: level frozen for the last 30 h. Rain not sent (the replay feed carries level only).";
+  } catch (e) { $("clock").textContent = "Break-the-sensor failed: " + e.message; }
+};
+
+// ---------- evidence
+const MODEL_NAMES = {hist_gb: "HistGradientBoosting (served)", rf: "Random forest", rf_platt: "Random forest + Platt",
+  logreg: "Logistic regression", rule_rain_24h: "Rule: 24 h rain (ours)", rule_rise_3h: "Rule: 3 h level rise (ours)"};
+async function loadMetrics() {
+  let m;
+  try { m = await (await fetch(`${API}/metrics`)).json(); }
+  catch (e) {
+    $("metricsErr").style.display = ""; $("metricsErr").textContent = "Could not reach /metrics: " + e.message;
+    $("apiState").className = "pill bad"; $("apiState").textContent = "model API offline"; return;
+  }
+  $("apiState").className = "pill ok"; $("apiState").textContent = "model API online";
+  const bench = m.last_benchmark || {}, env = bench.environment || m.environment || {};
+  $("machine").textContent = env.machine || "?"; $("arch").textContent = env.machine || "?";
+  const bal = m.summary.filter(r => r.op === "balanced");
+  const hgb = bal.find(r => r.model === "hist_gb");
+  const [c, n] = hgb.events_caught.split("/").map(Number);
+  countUp($("tEvents"), c, {suffix: "/" + n});
+  countUp($("tFalse"), hgb.false_alerts_per_month, {dec: 2});
+  const p50 = bench.single_prediction_ms && bench.single_prediction_ms.total.p50;
+  if (p50 != null) { countUp($("tP50"), p50, {dec: 1, suffix: " ms"}); $("tP50s").textContent = `features + model + checks, ${env.machine}, n=${bench.single_prediction_n}`; }
+  if (bench.model_predictions_per_second) { countUp($("tPps"), bench.model_predictions_per_second); $("tPpss").textContent = `batch of ${bench.model_batch_rows} h, ${env.machine}, ${env.cpu_count} CPUs`; }
+
+  const order = ["hist_gb", "rf", "rf_platt", "logreg", "rule_rain_24h", "rule_rise_3h"];
+  $("cvTable").innerHTML = "<tr><th>Model</th><th>Events caught</th><th>False / month</th><th>Median lead (h)</th><th>PR-AUC</th><th>ROC-AUC</th></tr>" +
+    order.map(k => bal.find(r => r.model === k)).filter(Boolean).map(r => `<tr class="${r.model === "hist_gb" ? "served" : ""}">
+      <td>${MODEL_NAMES[r.model] || r.model}${r.model === "rule_rise_3h" ? `<span class="tag">at chance</span>
+        <div class="why">Catches everything only by alerting constantly (${r.false_alerts_per_month.toFixed(1)} false/month).</div>` : ""}</td>
+      <td class="num">${r.events_caught}</td><td class="num">${r.false_alerts_per_month.toFixed(2)}</td><td class="num">${r.median_lead_h ?? "–"}</td>
+      <td class="num">${r.pr_auc.toFixed(3)}</td><td class="num ${r.roc_auc < .6 ? "dim" : ""}">${r.roc_auc.toFixed(3)}</td></tr>`).join("");
+
+  const rel = m.reliability || {};
+  const pts = k => (rel[k] || []).map(p => ({x: p.mean_pred, y: p.frac_pos}));
+  new Chart($("rel"), {
+    type: "line",
+    data: {datasets: [
+      {label: "Perfect", data: [{x: 0, y: 0}, {x: .5, y: .5}], borderColor: "#c4cbd4", borderDash: [4, 4], pointRadius: 0, borderWidth: 1},
+      {label: "HistGradientBoosting", data: pts("hist_gb"), borderColor: css("--blue"), backgroundColor: css("--blue"), pointRadius: 3.5, borderWidth: 2},
+      {label: "Random forest", data: pts("rf"), borderColor: css("--alert"), backgroundColor: css("--alert"), pointRadius: 3.5, borderWidth: 2},
+    ]},
+    options: {responsive: true, maintainAspectRatio: false, animation: {duration: 800},
+      plugins: {legend: {position: "top", align: "start", labels: {color: css("--muted"), boxWidth: 12, boxHeight: 2}}},
+      scales: {x: {type: "linear", min: 0, max: .5, title: {display: true, text: "predicted", color: css("--muted")}, ticks: {color: css("--faint")}, grid: {color: "#eef1f4"}},
+               y: {min: 0, max: .5, title: {display: true, text: "observed", color: css("--muted")}, ticks: {color: css("--faint")}, grid: {color: "#eef1f4"}}}},
+  });
+
+  const st = m.stress_tests;
+  if (!st) { $("stressNote").textContent = "stress.json not found on the model service."; return; }
+  $("stressNote").textContent = `${st.note} ${st.pre_event_h} h replayed before each event. Hover a scenario for details.`;
+  const desc = Object.fromEntries(st.scenarios.map(s => [s.name, s.description]));
+  $("stressTable").innerHTML = "<tr><th>Scenario</th><th>Mode</th><th>Caught</th><th>Flagged</th><th>Silent misses</th><th>Median lead (h)</th><th>LOW h during fault</th></tr>" +
+    st.summary.map(r => `<tr><td title="${desc[r.scenario] || ""}">${r.scenario.replace(/_/g, " ")}</td><td class="dim">${r.mode}</td>
+      <td class="num">${r.events_caught}</td><td class="num">${r.flagged_events}</td><td class="num ${r.silent_misses ? "silent" : ""}">${r.silent_misses}</td>
+      <td class="num">${r.median_lead_h ?? "–"}</td><td class="num">${r.low_while_fault_h ?? "n/a"}</td></tr>`).join("");
+}
+
+fetch(`${API}/health`).then(r => r.json()).then(h => { threshold = h.level_threshold_m; $("thr").textContent = threshold.toFixed(3); }).catch(() => {});
+loadMetrics();
+// console.html#replay starts the replay on load (handy for recording); #replay-20 sets the speed too
+const auto = location.hash.match(/^#replay(?:-(\d+))?$/);
+if (auto) {
+  if (auto[1]) { speed = +auto[1]; $("speedSeg").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.v === speed)); }
+  startReplay();
+}
+// console.html#wildcard-gauge_offline runs a SYNTHETIC wildcard on load
+const wild = location.hash.match(/^#wildcard-(\w+)$/);
+if (wild && [...$("wildSel").options].some(o => o.value === wild[1])) { $("wildSel").value = wild[1]; startReplay(wild[1]); }
+</script>
+</body>
+</html>
