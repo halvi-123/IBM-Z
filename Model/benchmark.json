@@ -1,0 +1,53 @@
+{
+  "environment": {
+    "machine": "s390x",
+    "platform": "Linux-6.8.0-147-generic-s390x-with-glibc2.39",
+    "python": "3.12.3",
+    "scikit_learn": "1.4.1.post1",
+    "numpy": "1.26.4",
+    "pandas": "2.1.4",
+    "cpu_count": 3,
+    "node": "surrey"
+  },
+  "single_prediction_ms": {
+    "features": {
+      "p50": 3.186,
+      "p95": 3.4,
+      "p99": 3.457,
+      "mean": 3.215
+    },
+    "model": {
+      "p50": 2.798,
+      "p95": 3.109,
+      "p99": 4.317,
+      "mean": 2.862
+    },
+    "flags": {
+      "p50": 1.882,
+      "p95": 2.106,
+      "p99": 2.319,
+      "mean": 1.927
+    },
+    "total": {
+      "p50": 7.921,
+      "p95": 8.4,
+      "p99": 9.405,
+      "mean": 8.004
+    },
+    "wall": {
+      "p50": 8.816,
+      "p95": 9.357,
+      "p99": 10.325,
+      "mean": 8.899
+    }
+  },
+  "single_prediction_n": 200,
+  "window_h": 240,
+  "replay_hours": 8760,
+  "replay_seconds": 0.0377,
+  "replay_hours_per_second": 232071.1,
+  "model_batch_rows": 8760,
+  "model_predictions_per_second": 306542.9,
+  "note": "Latency covers features + model + data-quality flags with data already in memory; network fetch from the EA API is measured separately in predict_live.",
+  "ran_at": "2026-10-18 08:05:51.744052+00:00"
+}
