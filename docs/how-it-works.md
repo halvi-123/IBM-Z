@@ -178,7 +178,9 @@ of hourly history scores in about 0.04 s. See [progress.md](progress.md) for the
 - One gauge, three years, 45 events. Differences between models are within noise.
 - The horizon caps lead time at 24 h.
 - Reasons are descriptive, not model attributions.
-- A stuck sensor takes 24 hours to detect, and a spike only raises a flag.
+- A stuck sensor takes 24 hours to detect, and a spike only raises a flag. In the SYNTHETIC wildcard replays of the
+  Dec 2024 event, a single +0.5 m spike showed ABOVE THRESHOLD for one hour, and a frozen sensor hid the real
+  crossing (the status stayed on ALERT).
 - The balanced alert cut-off is low, so ALERT is on for about 11% of holdout hours. Those hours form about 3
   alert episodes a month, of which 2.25 were false (9 holdout events, see [progress.md](progress.md)).
 - Model files saved with joblib may not load on a different CPU architecture; we train and serve on the VM.
