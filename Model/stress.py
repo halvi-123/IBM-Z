@@ -188,8 +188,8 @@ def export(summary, per_event, bundle, path="stress.json"):
     print("Saved", path)
 
 
-def show(summary):
-    print(f"\n{LABEL} stress tests ({NOTE})\n")
+def show(summary, note=NOTE):
+    print(f"\n{note}\n")
     print(summary.drop(columns="status_hours").to_string(index=False))
 
 
@@ -199,7 +199,7 @@ if __name__ == "__main__":
         hourly = synthetic_hourly()
         bundle = svc.train(hourly, meta={"station": "SYNTHETIC"})
         summary, _ = run(bundle, hourly, modes=("balanced",))
-        show(summary)
+        show(summary, "SYNTHETIC self-test on bench.synthetic_hourly data (checks the code, not the model).")
     else:
         bundle = svc.load_bundle()
         hourly = svc.load_hourly_csv()
