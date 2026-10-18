@@ -179,5 +179,6 @@ of hourly history scores in about 0.04 s. See [progress.md](progress.md) for the
 - The horizon caps lead time at 24 h.
 - Reasons are descriptive, not model attributions.
 - A stuck sensor takes 24 hours to detect, and a spike only raises a flag.
-- The balanced alert cut-off is low, so ALERT is on for about 11% of the holdout year (see [progress.md](progress.md)).
+- The balanced alert cut-off is low, so ALERT is on for about 11% of holdout hours. Those hours form about 3
+  alert episodes a month, of which 2.25 were false (9 holdout events, see [progress.md](progress.md)).
 - Model files saved with joblib may not load on a different CPU architecture; we train and serve on the VM.

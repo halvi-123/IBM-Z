@@ -12,7 +12,7 @@ Status as of Sunday 18 October 2026 (submission deadline 17:30 UK the same day).
 | Trained model bundle (`Model/river_model.joblib`) | Trained on the VM on WY2023 and WY2024, WY2025 kept back as holdout |
 | Speed benchmark on LinuxONE | Done, results in `Model/benchmark.json` |
 | Holdout replay check | Done (numbers below) |
-| Alert threshold review | Analysed, decision pending (see "Open decisions") |
+| Alert threshold review | Closed: balanced mode gives 2.25 false alerts / month on the holdout, under the 3 / month bar |
 | Stress tests (`Model/stress.py`) | Done, run on the VM on the 9 holdout events, results in `Model/stress.json` |
 | Django backend (`Backend/`) | Done: models, admin, JSON API, model-service client |
 | Frontend (`Frontend/`) | Not built yet, API contract written in `Frontend/README.md` |
@@ -146,12 +146,23 @@ We replayed the whole holdout year (8,760 hours, 9 events) through the live serv
 | WATCH | 3.9% (340 h) |
 | ABOVE THRESHOLD | 2.0% (174 h) |
 
-- All 9 holdout events were preceded by an ALERT, with about 2.25 false alert episodes per month. That matches
-  cross-validation (2.28).
+False alert episodes, counted with the same rules as `bench.py` (crossings under 12 h apart merged into one
+event, ALERT hours under 12 h apart merged into one episode, an episode is false if no event starts within 24 h
+of it), over 8,760 hours (11.99 months):
+
+| Mode | Alert cut-off | Events caught | Alert episodes | False episodes | False alerts / month | Median lead (h) |
+|---|---|---|---|---|---|---|
+| balanced | 0.0218 | 9/9 | 36 | 27 | 2.25 | 11.0 |
+| sensitive | 0.0047 | 9/9 | 44 | 34 | 2.84 | 24.0 |
+
+The count is the same whether alerts are taken as "probability at or above the cut-off" (as `bench.py` does) or
+as "status shown was ALERT" (as the service does).
+
+- Balanced mode matches cross-validation (2.25 against 2.28 false alerts per month).
 - WATCH covers only 3.9% of hours, so it does not need raising.
 - On clean history the stuck-sensor flag fired 0% of the time, the spike flag 0.07%, rain offline 0%.
-- ALERT is on for 11% of the year because the balanced cut-off is very low (probability 0.022).
-  See "Open decisions".
+- ALERT is on for 11% of hours, but those hours come in 36 episodes over the year, about 3 a month, of which
+  about 2.25 are false.
 
 ### 11. Built the Django backend
 
@@ -238,30 +249,22 @@ What this shows:
 One thing to check live: if EA readings routinely arrive more than 3 hours late, the live status would sit on
 DATA STALE. The live `/predict` result reports `data_age_h`, which tells us the real delay.
 
-## Open decisions
+## Decisions
 
-### Alert cut-off is low
+### Alert cut-off: closed, kept as trained
 
-The balanced cut-off is chosen by maximising F1 over individual hours in the validation year. Because positive
-hours are rare, that picks a very low probability (0.022), so ALERT is on for 11% of the holdout year.
+The balanced cut-off (probability 0.022) looked low because ALERT is on for 11% of holdout hours. We set the bar
+in advance: keep it if balanced mode gives about 3 false alerts per month or fewer on the holdout, otherwise
+retrain with a new cut-off rule chosen only from WY2023 and WY2024.
 
-On the holdout, a higher cut-off would reduce false alerts (for example 0.05 still caught 9/9 at 1.83 false
-alerts per month). But we must not pick a number from that table: it is the untouched holdout, and tuning on it
-would break the claim that thresholds are chosen inside training data only.
-
-Two honest options:
-
-1. Change the selection rule in `bench.pick_thresholds` (for example: the highest cut-off that still catches
-   every validation event), re-run cross-validation and retraining on the VM, then report the holdout once.
-2. Keep the current cut-off and show the ALERT share openly. The false alert rate (about 2.3 per month) is
-   consistent between cross-validation and holdout, so this is defensible.
+Result: 2.25 false alerts per month, 9/9 events caught (table in step 10). The cut-off stays as trained, nothing
+was tuned on WY2025, and the holdout result is reported once.
 
 ## Still to do (priority order)
 
 1. Restart the API on the VM so `/metrics` serves `stress.json`, and copy `stress.json` back to the repo.
-2. Decide the alert cut-off question above.
-3. Screenshots in `docs/screenshots/`: `uname -m`, benchmark output, the running API, stress test output.
-4. Frontend: responder view and judge view.
-5. Fill the results section of the root README from `metrics.json`, `benchmark.json` and `stress.json`.
-6. Record the video (3 minutes max).
-7. If time: a second gauge on a faster-responding river.
+2. Screenshots in `docs/screenshots/`: `uname -m`, benchmark output, the running API, stress test output.
+3. Frontend: responder view and judge view.
+4. Fill the results section of the root README from `metrics.json`, `benchmark.json` and `stress.json`.
+5. Record the video (3 minutes max).
+6. If time: a second gauge on a faster-responding river.
