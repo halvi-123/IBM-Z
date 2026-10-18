@@ -13,7 +13,7 @@ Status as of Sunday 18 October 2026 (submission deadline 17:30 UK the same day).
 | Speed benchmark on LinuxONE | Done, results in `Model/benchmark.json` |
 | Holdout replay check | Done (numbers below) |
 | Alert threshold review | Analysed, decision pending (see "Open decisions") |
-| Stress tests (`Model/stress.py`) | Written, self-test passed on the VM, real run pending |
+| Stress tests (`Model/stress.py`) | Done, run on the VM on the 9 holdout events, results in `Model/stress.json` |
 | Django backend (`Backend/`) | Done: models, admin, JSON API, model-service client |
 | Frontend (`Frontend/`) | Not built yet, API contract written in `Frontend/README.md` |
 | README, flowchart, screenshots | README drafted, flowchart in [how-it-works.md](how-it-works.md), screenshots still to take |
@@ -186,7 +186,57 @@ What it already tells us about the design:
 - A stuck sensor is the weak spot. It is only detected after 24 flat hours, so LOW can show during the first day.
 - A spike only raises a flag. It does not change the status to DATA ISSUE.
 - More rain lowered the alert for one fake event. The model is not forced to treat more rain as more risk.
-  We will check whether this also happens on real data.
+  This did not happen on the real holdout events (below).
+
+### 13. Ran the stress tests on the real holdout (SYNTHETIC)
+
+`python stress.py` on the VM, 9 real holdout events, 48 hours replayed before each, both modes. The events are
+real; the damage to the data is artificial, so these are SYNTHETIC results, not real-world performance.
+
+**Balanced mode (default)**
+
+| Scenario | Caught (of 9) | Flagged | Silent misses | Median lead (h) | Hours with changed status | LOW hours during fault |
+|---|---|---|---|---|---|---|
+| baseline | 9/9 | 0 | 0 | 11.0 | 0.0% | n/a |
+| doubled_rain | 9/9 | 0 | 0 | 24.0 | 21.8% | n/a |
+| sudden_spike | 9/9 | 0 | 0 | 12.0 | 8.1% | 3 |
+| stuck_sensor | 3/9 | 5 | **1** | 24.0 | 24.3% | 122 |
+| gauge_offline | 4/9 | 9 | 0 | 24.0 | 19.7% | 15 |
+| gaps | 9/9 | 5 | 0 | 9.0 | 35.6% | 87 |
+| late_data | 0/9 | 9 | 0 | n/a | 95.8% | 0 |
+
+**Sensitive mode**
+
+| Scenario | Caught (of 9) | Flagged | Silent misses | Median lead (h) | Hours with changed status | LOW hours during fault |
+|---|---|---|---|---|---|---|
+| baseline | 9/9 | 0 | 0 | 24.0 | 0.0% | n/a |
+| doubled_rain | 9/9 | 0 | 0 | 24.0 | 26.4% | n/a |
+| sudden_spike | 9/9 | 0 | 0 | 24.0 | 3.7% | 0 |
+| stuck_sensor | 7/9 | 5 | **1** | 23.0 | 22.9% | 35 |
+| gauge_offline | 8/9 | 9 | 0 | 24.0 | 19.2% | 3 |
+| gaps | 9/9 | 5 | 0 | 24.0 | 27.1% | 5 |
+| late_data | 0/9 | 9 | 0 | n/a | 95.8% | 0 |
+
+What this shows:
+
+- **The baseline matches the holdout check.** 9/9 caught with an 11 h median lead in balanced mode, the same
+  as the full-year replay. Sensitive mode alerts as soon as the 24 h window opens.
+- **Across 6 damage types and 2 modes, there is 1 silent miss, and it is the stuck sensor.** A frozen
+  sensor reads as calm water, and the check needs 24 flat hours before it fires. This is our main known weakness.
+- **Missing or late data is handled safely.** gauge_offline and late_data are flagged on every event (9/9), so
+  even when no ALERT shows, the responder is told the data cannot be trusted. late_data catches 0 because 4 h
+  late is past the 3 h stale limit, so every hour shows DATA STALE instead.
+- **Gaps barely hurt.** 40% of readings missing still gives 9/9 caught in both modes.
+- **Heavier rain makes the model alert earlier, never later** (median lead 11 h to 24 h in balanced mode).
+- **A 0.5 m spike did not cause trouble here**: no missed events, and only a few LOW hours while it was in the data.
+- **Sensitive mode is much more robust to faults** (stuck sensor 7/9 against 3/9, gauge offline 8/9 against
+  4/9), at the cost of more alerts in normal times.
+- "Flagged" counts events where DATA STALE or DATA ISSUE was the shown status. ALERT outranks DATA ISSUE, so
+  when the model alerts anyway the flag is still in the result but not the headline status. That is why gaps
+  shows 9 caught but only 5 flagged.
+
+One thing to check live: if EA readings routinely arrive more than 3 hours late, the live status would sit on
+DATA STALE. The live `/predict` result reports `data_age_h`, which tells us the real delay.
 
 ## Open decisions
 
@@ -208,7 +258,7 @@ Two honest options:
 
 ## Still to do (priority order)
 
-1. Run `python stress.py` on the real holdout on the VM, copy `stress.json` back, restart the API.
+1. Restart the API on the VM so `/metrics` serves `stress.json`, and copy `stress.json` back to the repo.
 2. Decide the alert cut-off question above.
 3. Screenshots in `docs/screenshots/`: `uname -m`, benchmark output, the running API, stress test output.
 4. Frontend: responder view and judge view.
